@@ -1,6 +1,9 @@
 /**
  * PM2 Ecosystem Configuration for Node METAR Map
  * Manages the application as a background service with automatic restarts
+ * 
+ * The app now runs continuously and fetches METAR data at configured intervals.
+ * PM2 will auto-restart on crashes or excessive memory usage.
  */
 
 module.exports = {
@@ -13,12 +16,10 @@ module.exports = {
     exec_mode: 'fork',
     
     // Restart configuration
-    autorestart: false,  // Don't auto-restart on exit (we use cron_restart instead)
-    max_restarts: 3,
-    min_uptime: '10s',
-    
-    // Cron-based restart (every 10 minutes to fetch new METAR data)
-    cron_restart: '*/10 * * * *',
+    autorestart: true,   // Auto-restart on crashes
+    max_restarts: 10,    // Allow more restarts (continuous mode)
+    min_uptime: '30s',   // Must run for 30s to be considered stable
+    restart_delay: 5000, // Wait 5s before restarting after crash
     
     // Memory management
     max_memory_restart: '200M',

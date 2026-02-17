@@ -157,6 +157,7 @@ export interface Config {
 
   // API Configuration
   metarApiUrl: string;
+  metarUpdateInterval: number;  // Minutes between METAR updates
 
   // Mock GPIO Display Options
   mockGpioColors: boolean;

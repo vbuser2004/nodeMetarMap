@@ -42,6 +42,7 @@ const mockConfig: Config = {
   showLegend: false,
   offsetLegendBy: 0,
   metarApiUrl: 'https://aviationweather.gov/api/data/metar',
+  metarUpdateInterval: 5,
   mockGpioColors: true,
   mockGpioFormat: 'strip',
   statePath: '/tmp/metar-state.json',

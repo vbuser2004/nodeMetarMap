@@ -339,6 +339,12 @@ export async function loadConfig(): Promise<Config> {
     'METAR_API_URL',
     'https://aviationweather.gov/api/data/metar'
   );
+  const metarUpdateInterval = getEnvNumber('METAR_UPDATE_INTERVAL', 5);
+  
+  // Validate update interval
+  if (metarUpdateInterval <= 0) {
+    throw new Error(`METAR_UPDATE_INTERVAL must be positive: ${metarUpdateInterval}`);
+  }
   
   // Mock GPIO Display Options
   const mockGpioColors = getEnvBoolean('MOCK_GPIO_COLORS', true);
@@ -376,6 +382,7 @@ export async function loadConfig(): Promise<Config> {
     showLegend,
     offsetLegendBy,
     metarApiUrl,
+    metarUpdateInterval,
     mockGpioColors,
     mockGpioFormat,
     statePath,
