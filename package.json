@@ -1,0 +1,52 @@
+{
+  "name": "node-metar-map",
+  "version": "1.0.0",
+  "description": "Node.js TypeScript METAR aviation weather LED visualization for Raspberry Pi",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "pixels-off": "ts-node src/scripts/pixelsOff.ts",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop metar-map",
+    "pm2:restart": "pm2 restart metar-map",
+    "pm2:logs": "pm2 logs metar-map",
+    "pm2:delete": "pm2 delete metar-map",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "metar",
+    "aviation",
+    "weather",
+    "raspberry-pi",
+    "neopixel",
+    "led",
+    "ws2811",
+    "ws2812"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.4.0",
+    "rpi-ws281x-native": "^1.0.3",
+    "suncalc": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.10.0",
+    "@types/suncalc": "^1.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "pm2": "^5.3.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}
