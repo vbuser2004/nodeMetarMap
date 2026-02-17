@@ -109,22 +109,32 @@ export class RealLedService implements ILedService {
 /**
  * Mock LED service implementation for development/testing
  * Logs LED operations to console instead of controlling actual hardware
+ * Shows colored emojis with airport codes when enabled
  */
 export class MockLedService implements ILedService {
   private pixels: (Color | null)[];
   private brightness: number;
   private ledCount: number;
-  private verbose: boolean;
+  private config: Config;
+  private airportMap: Map<number, { code: string; name?: string }>;
   
-  constructor(config: Config, verbose: boolean = false) {
+  constructor(config: Config) {
     this.ledCount = config.ledCount;
     this.brightness = config.ledBrightness;
     this.pixels = new Array(config.ledCount).fill(null);
-    this.verbose = verbose;
+    this.config = config;
+    
+    // Build reverse mapping: LED index -> Airport info
+    this.airportMap = new Map();
+    for (const airport of config.airports) {
+      this.airportMap.set(airport.led, {
+        code: airport.code,
+        name: airport.name
+      });
+    }
     
     console.log('[MOCK GPIO] LED Service initialized');
-    console.log(`[MOCK GPIO] LED Count: ${config.ledCount}, Pin: ${config.ledPin}`);
-    console.log(`[MOCK GPIO] LED Order: ${config.ledOrder}, Brightness: ${config.ledBrightness}`);
+    console.log(`[MOCK GPIO] ${config.airports.length} airports mapped to ${config.ledCount} LEDs`);
   }
   
   setPixel(index: number, color: Color): void {
@@ -134,52 +144,117 @@ export class MockLedService implements ILedService {
     }
     
     this.pixels[index] = color;
+  }
+  
+  show(): void {
+    if (this.config.mockGpioFormat === 'strip') {
+      this.showStrip();
+    } else if (this.config.mockGpioFormat === 'detailed') {
+      this.showDetailed();
+    }
     
-    if (this.verbose) {
+    // Always show summary
+    const activeCount = this.pixels.filter(
+      p => p && (p.r > 0 || p.g > 0 || p.b > 0)
+    ).length;
+    console.log(`[MOCK GPIO] ${activeCount}/${this.ledCount} LEDs active\n`);
+  }
+  
+  private showStrip(): void {
+    // Build airport code labels and colored blocks
+    const labels: string[] = [];
+    const blocks: string[] = [];
+    
+    for (const airport of this.config.airports) {
+      const color = this.pixels[airport.led] || { r: 0, g: 0, b: 0 };
+      labels.push(airport.code.padEnd(6));
+      blocks.push(this.colorize(color));
+    }
+    
+    console.log('[MOCK GPIO] LED Strip:');
+    console.log('         ' + labels.join(' '));
+    console.log('Strip:   ' + blocks.join('  '));
+  }
+  
+  private showDetailed(): void {
+    console.log('[MOCK GPIO] LED Details:');
+    
+    for (const airport of this.config.airports) {
+      const color = this.pixels[airport.led] || { r: 0, g: 0, b: 0 };
+      const block = this.colorize(color);
+      const name = airport.name || '';
+      const colorName = this.getColorName(color);
+      
       console.log(
-        `[MOCK GPIO] LED ${index} -> RGB(${color.r}, ${color.g}, ${color.b})`
+        `  LED ${airport.led.toString().padStart(2)}: ` +
+        `${airport.code} ${block} ${colorName}` +
+        `${name ? ` (${name})` : ''}`
       );
     }
   }
   
-  show(): void {
-    if (this.verbose) {
-      console.log('[MOCK GPIO] Showing LEDs');
-      
-      // Display a visual representation
-      const display = this.pixels
-        .map((color) => {
-          if (!color) return '_';
-          if (color.r === 0 && color.g === 0 && color.b === 0) return '_';
-          
-          // Simple color representation
-          if (color.r > 200 && color.g < 50 && color.b < 50) return 'R'; // Red-ish
-          if (color.g > 200 && color.r < 50 && color.b < 50) return 'G'; // Green-ish
-          if (color.b > 200 && color.r < 50 && color.g < 50) return 'B'; // Blue-ish
-          if (color.r > 200 && color.g > 200 && color.b < 50) return 'Y'; // Yellow
-          if (color.r > 200 && color.b > 200) return 'M'; // Magenta
-          if (color.r > 200 && color.g > 200 && color.b > 200) return 'W'; // White
-          
-          return 'X'; // Other color
-        })
-        .join('');
-      
-      console.log(`[MOCK GPIO] [${display}]`);
+  private colorize(color: Color): string {
+    if (!this.config.mockGpioColors) {
+      return this.getColorLetter(color);
     }
     
-    // Summary of active LEDs
-    const activeLeds = this.pixels.filter(
-      color => color && (color.r > 0 || color.g > 0 || color.b > 0)
-    ).length;
+    // Use emojis for visual representation
+    if (color.r === 0 && color.g === 0 && color.b === 0) return '⬛';
     
-    console.log(`[MOCK GPIO] ${activeLeds}/${this.ledCount} LEDs active`);
+    // Note: GRB format means:
+    // - r channel contains Green
+    // - g channel contains Red
+    // - b channel contains Blue
+    
+    // Green (VFR) - high in r channel (which is G in GRB)
+    if (color.r > 200 && color.g < 50 && color.b < 50) return '🟢';
+    if (color.r > 100 && color.r <= 200 && color.g < 50 && color.b < 50) return '🟢'; // Faded
+    
+    // Blue (MVFR) - high in b channel
+    if (color.b > 200 && color.r < 50 && color.g < 50) return '🟦';
+    if (color.b > 100 && color.b <= 200 && color.r < 50 && color.g < 50) return '🟦'; // Faded
+    
+    // Red (IFR) - high in g channel (which is R in GRB)
+    if (color.g > 200 && color.r < 50 && color.b < 50) return '🟥';
+    if (color.g > 100 && color.g <= 200 && color.r < 50 && color.b < 50) return '🟥'; // Faded
+    
+    // Magenta (LIFR) - high in both r and b channels
+    if (color.r > 200 && color.b > 200) return '🟪';
+    if (color.r > 100 && color.b > 100 && color.r <= 200) return '🟪'; // Faded
+    
+    // Yellow (high winds) - high in r and g channels
+    if (color.r > 200 && color.g > 200 && color.b < 50) return '🟨';
+    
+    // White (lightning) - all channels high
+    if (color.r > 200 && color.g > 200 && color.b > 200) return '⚪';
+    
+    return '◼️'; // Unknown
+  }
+  
+  private getColorLetter(color: Color): string {
+    if (color.r === 0 && color.g === 0 && color.b === 0) return '_';
+    if (color.r > 200 && color.g < 50) return 'G'; // Green (VFR)
+    if (color.b > 200) return 'B'; // Blue (MVFR)
+    if (color.g > 200 && color.r < 50) return 'R'; // Red (IFR)
+    if (color.r > 200 && color.b > 200) return 'M'; // Magenta (LIFR)
+    if (color.r > 200 && color.g > 200) return 'Y'; // Yellow (high winds)
+    if (color.r > 200 && color.g > 200 && color.b > 200) return 'W'; // White (lightning)
+    return 'X';
+  }
+  
+  private getColorName(color: Color): string {
+    if (color.r === 0 && color.g === 0 && color.b === 0) return 'OFF    ';
+    if (color.r > 200 && color.g < 50 && color.b < 50) return 'VFR    ';
+    if (color.b > 200 && color.r < 50 && color.g < 50) return 'MVFR   ';
+    if (color.g > 200 && color.r < 50 && color.b < 50) return 'IFR    ';
+    if (color.r > 200 && color.b > 200) return 'LIFR   ';
+    if (color.r > 200 && color.g > 200 && color.b < 50) return 'HI-WIND';
+    if (color.r > 200 && color.g > 200 && color.b > 200) return 'LIGHTNING';
+    return 'UNKNOWN';
   }
   
   clear(): void {
     this.pixels.fill(null);
-    if (this.verbose) {
-      console.log('[MOCK GPIO] Cleared all LEDs');
-    }
   }
   
   setBrightness(brightness: number): void {
@@ -202,7 +277,7 @@ export class MockLedService implements ILedService {
 export function createLedService(config: Config): ILedService {
   if (config.useMockGpio) {
     console.log('Using mock GPIO LED service (for development)');
-    return new MockLedService(config, false);  // Set to true for verbose logging
+    return new MockLedService(config);
   } else {
     console.log('Using real GPIO LED service');
     return new RealLedService(config);

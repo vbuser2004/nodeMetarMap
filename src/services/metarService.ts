@@ -150,7 +150,9 @@ export function parseConditions(
 export async function fetchAndParseAllConditions(
   config: Config
 ): Promise<Map<string, AirportConditions>> {
-  const metarData = await fetchMetarData(config.airports, config.metarApiUrl);
+  // Extract airport codes from mappings
+  const airportCodes = config.airports.map(a => a.code);
+  const metarData = await fetchMetarData(airportCodes, config.metarApiUrl);
   
   const conditionsMap = new Map<string, AirportConditions>();
   
@@ -174,11 +176,12 @@ export async function fetchAndParseAllConditions(
   // Check for missing airports
   const receivedAirports = new Set(metarData.map(m => m.icaoId));
   const missingAirports = config.airports.filter(
-    code => !receivedAirports.has(code)
+    airport => !receivedAirports.has(airport.code)
   );
   
   if (missingAirports.length > 0) {
-    console.log(`Warning: No METAR data for: ${missingAirports.join(', ')}`);
+    const codes = missingAirports.map(a => a.code).join(', ');
+    console.log(`Warning: No METAR data for: ${codes}`);
   }
   
   return conditionsMap;

@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "ledCount": 50,
+  "airports": [
+    {
+      "code": "KGMU",
+      "led": 0,
+      "name": "Greenville Downtown",
+      "enabled": true
+    },
+    {
+      "code": "KCLT",
+      "led": 2,
+      "name": "Charlotte Douglas International",
+      "enabled": true
+    },
+    {
+      "code": "KJQF",
+      "led": 5,
+      "name": "Concord-Padgett Regional",
+      "enabled": true
+    },
+    {
+      "code": "KEQY",
+      "led": 8,
+      "name": "Charlotte-Monroe Executive",
+      "enabled": true
+    },
+    {
+      "code": "KRUQ",
+      "led": 12,
+      "name": "Rowan County",
+      "enabled": true
+    }
+  ],
+  "metadata": {
+    "description": "Charlotte area aviation weather map",
+    "created": "2026-02-17",
+    "lastModified": "2026-02-17",
+    "notes": "LED positions correspond to physical map layout. LEDs between airports remain off."
+  }
+}

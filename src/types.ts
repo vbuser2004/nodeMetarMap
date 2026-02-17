@@ -55,6 +55,41 @@ export interface MetarData {
 }
 
 /**
+ * Airport configuration entry
+ */
+export interface AirportConfig {
+  code: string;           // ICAO code (e.g., "KCLT")
+  led: number;            // LED index (0-based)
+  name?: string;          // Optional display name
+  enabled?: boolean;      // Optional enable/disable (default: true)
+  notes?: string;         // Optional notes
+}
+
+/**
+ * Airports configuration file format (JSON)
+ */
+export interface AirportsConfigFile {
+  version: string;
+  ledCount?: number;      // Optional validation
+  airports: AirportConfig[];
+  metadata?: {
+    description?: string;
+    created?: string;
+    lastModified?: string;
+    notes?: string;
+  };
+}
+
+/**
+ * Parsed airport mapping for runtime use
+ */
+export interface AirportMapping {
+  code: string;           // ICAO code
+  led: number;            // LED index
+  name?: string;          // Display name
+}
+
+/**
  * Processed airport conditions for LED display
  * Flight category can be null if unable to determine
  */
@@ -81,7 +116,7 @@ export interface Config {
   ledOrder: 'RGB' | 'GRB';
 
   // Airport Configuration
-  airports: string[];
+  airports: AirportMapping[];
 
   // Colors (stored as Color objects)
   colors: {
@@ -122,6 +157,10 @@ export interface Config {
 
   // API Configuration
   metarApiUrl: string;
+
+  // Mock GPIO Display Options
+  mockGpioColors: boolean;
+  mockGpioFormat: 'strip' | 'detailed';
 }
 
 /**

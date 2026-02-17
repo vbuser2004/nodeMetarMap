@@ -5,7 +5,7 @@
 
 import * as dotenv from 'dotenv';
 import * as fs from 'fs/promises';
-import { Config, Color } from './types';
+import { Config, Color, AirportMapping, AirportsConfigFile, AirportConfig } from './types';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -35,50 +35,136 @@ function parseColor(colorStr: string): Color {
 }
 
 /**
- * Load airports from environment variable or file
- * Priority: AIRPORTS env var > AIRPORTS_FILE path
- * @returns Array of airport ICAO codes
+ * Check if a file exists
  */
-async function loadAirports(): Promise<string[]> {
-  // Try environment variable first
-  if (process.env.AIRPORTS) {
-    const airports = process.env.AIRPORTS
-      .split(',')
-      .map(code => code.trim().toUpperCase())
-      .filter(code => code && code !== 'NULL');
-    
-    if (airports.length === 0) {
-      throw new Error('AIRPORTS environment variable is empty');
-    }
-    
-    console.log(`Loaded ${airports.length} airports from AIRPORTS environment variable`);
-    return airports;
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await fs.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Load airports from JSON configuration file
+ */
+async function loadAirportsFromJson(path: string): Promise<AirportMapping[]> {
+  const content = await fs.readFile(path, 'utf-8');
+  const config: AirportsConfigFile = JSON.parse(content);
+  
+  // Validate version
+  if (config.version !== '1.0') {
+    console.warn(`Unknown config version: ${config.version}`);
   }
   
-  // Fallback to file
-  const filePath = process.env.AIRPORTS_FILE || '/home/pi/airports';
+  // Filter enabled airports and validate
+  const airports = config.airports
+    .filter((a: AirportConfig) => a.enabled !== false)
+    .map((a: AirportConfig) => ({
+      code: a.code.toUpperCase(),
+      led: a.led,
+      name: a.name
+    }));
   
-  try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const airports = content
-      .split('\n')
-      .map(line => line.trim().toUpperCase())
-      .filter(line => line && line !== 'NULL');
-    
-    if (airports.length === 0) {
-      throw new Error(`Airports file ${filePath} is empty`);
+  // Validate LED indices
+  validateLedMapping(airports);
+  
+  console.log(`Loaded ${airports.length} airports from ${path} (JSON format)`);
+  return airports;
+}
+
+/**
+ * Load airports from text file (backward compatibility)
+ */
+async function loadAirportsFromTextFile(path: string): Promise<AirportMapping[]> {
+  const content = await fs.readFile(path, 'utf-8');
+  const lines = content.split('\n').map(l => l.trim());
+  
+  const airports = lines
+    .map((code, index) => ({
+      code: code.toUpperCase(),
+      led: index,
+      name: undefined
+    }))
+    .filter(a => a.code && a.code !== 'NULL');
+  
+  console.log(`Loaded ${airports.length} airports from ${path} (text format)`);
+  return airports;
+}
+
+/**
+ * Load airports from environment variable (simple format)
+ */
+function loadAirportsFromEnvVar(value: string): AirportMapping[] {
+  const airports = value
+    .split(',')
+    .map((code, index) => ({
+      code: code.trim().toUpperCase(),
+      led: index,
+      name: undefined
+    }))
+    .filter(a => a.code && a.code !== 'NULL');
+  
+  if (airports.length === 0) {
+    throw new Error('AIRPORTS environment variable is empty');
+  }
+  
+  console.log(`Loaded ${airports.length} airports from AIRPORTS environment variable`);
+  return airports;
+}
+
+/**
+ * Validate LED mapping for conflicts
+ */
+function validateLedMapping(airports: AirportMapping[]): void {
+  // Check for duplicate LED assignments
+  const ledMap = new Map<number, string>();
+  
+  for (const airport of airports) {
+    if (airport.led < 0) {
+      throw new Error(`Invalid LED index for ${airport.code}: ${airport.led}`);
     }
     
-    console.log(`Loaded ${airports.length} airports from ${filePath}`);
-    return airports;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (ledMap.has(airport.led)) {
       throw new Error(
-        `Airports configuration not found. Set AIRPORTS environment variable or create file at ${filePath}`
+        `LED ${airport.led} assigned to multiple airports: ` +
+        `${ledMap.get(airport.led)} and ${airport.code}`
       );
     }
-    throw new Error(`Failed to read airports file ${filePath}: ${error}`);
+    
+    ledMap.set(airport.led, airport.code);
   }
+}
+
+/**
+ * Load airports from various sources with priority
+ * Priority: 1. JSON file, 2. Env var, 3. Text file
+ * @returns Array of airport mappings with LED indices
+ */
+async function loadAirports(): Promise<AirportMapping[]> {
+  // Priority 1: JSON file
+  const jsonPath = process.env.AIRPORTS_FILE_JSON || 
+                  process.cwd() + '/airports.json';
+  
+  if (await fileExists(jsonPath)) {
+    return await loadAirportsFromJson(jsonPath);
+  }
+  
+  // Priority 2: Environment variable (comma-separated)
+  if (process.env.AIRPORTS) {
+    return loadAirportsFromEnvVar(process.env.AIRPORTS);
+  }
+  
+  // Priority 3: Text file (backward compatibility)
+  const textPath = process.env.AIRPORTS_FILE || '/home/pi/airports';
+  if (await fileExists(textPath)) {
+    return await loadAirportsFromTextFile(textPath);
+  }
+  
+  throw new Error(
+    'No airport configuration found. Please set AIRPORTS_FILE_JSON, AIRPORTS, or AIRPORTS_FILE'
+  );
 }
 
 /**
@@ -154,16 +240,18 @@ export async function loadConfig(): Promise<Config> {
     throw new Error(`LED_ORDER must be RGB or GRB: ${ledOrder}`);
   }
   
-  // Check if airports exceed LED count
-  const showLegend = getEnvBoolean('SHOW_LEGEND', false);
-  const requiredLeds = airports.length + (showLegend ? 7 : 0);
-  if (requiredLeds > ledCount) {
+  // Check if any airport LED exceeds LED count
+  const maxLedIndex = Math.max(...airports.map(a => a.led));
+  if (maxLedIndex >= ledCount) {
+    const offendingAirport = airports.find(a => a.led === maxLedIndex);
     throw new Error(
-      `Too many airports for LED strip. ` +
-      `Required: ${requiredLeds} (${airports.length} airports + ${showLegend ? 7 : 0} legend), ` +
-      `Available: ${ledCount}`
+      `LED index ${maxLedIndex} for ${offendingAirport?.code} exceeds LED_COUNT (${ledCount}). ` +
+      `LED indices must be 0-${ledCount - 1}`
     );
   }
+  
+  // Legend LEDs validation
+  const showLegend = getEnvBoolean('SHOW_LEGEND', false);
   
   // Colors
   const colors = {
@@ -252,6 +340,11 @@ export async function loadConfig(): Promise<Config> {
     'https://aviationweather.gov/api/data/metar'
   );
   
+  // Mock GPIO Display Options
+  const mockGpioColors = getEnvBoolean('MOCK_GPIO_COLORS', true);
+  const mockGpioFormatStr = getEnvString('MOCK_GPIO_FORMAT', 'strip');
+  const mockGpioFormat = (mockGpioFormatStr === 'detailed' ? 'detailed' : 'strip') as 'strip' | 'detailed';
+  
   const config: Config = {
     useMockGpio,
     ledCount,
@@ -277,7 +370,9 @@ export async function loadConfig(): Promise<Config> {
     locationLon,
     showLegend,
     offsetLegendBy,
-    metarApiUrl
+    metarApiUrl,
+    mockGpioColors,
+    mockGpioFormat
   };
   
   console.log('Configuration loaded successfully');

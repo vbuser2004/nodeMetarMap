@@ -61,21 +61,21 @@ async function main(): Promise<void> {
     
     for (let cycle = 0; cycle < loopLimit; cycle++) {
       // Update each airport LED
-      for (let i = 0; i < config.airports.length; i++) {
-        const airportCode = config.airports[i];
-        const conditions = conditionsMap.get(airportCode);
+      for (const airport of config.airports) {
+        const conditions = conditionsMap.get(airport.code);
         
         // Get color for this airport based on conditions and animation state
         const color = getColorForConditions(conditions, windCycle, config);
         
-        // Set LED color
-        ledService.setPixel(i, color);
+        // Set LED color at the configured index
+        ledService.setPixel(airport.led, color);
       }
       
       // Show legend LEDs if enabled
       if (config.showLegend) {
         const legendColors = getLegendColors(windCycle, config);
-        const legendStartIndex = config.airports.length + config.offsetLegendBy;
+        const maxAirportLed = Math.max(...config.airports.map(a => a.led));
+        const legendStartIndex = maxAirportLed + 1 + config.offsetLegendBy;
         
         for (let i = 0; i < legendColors.length; i++) {
           ledService.setPixel(legendStartIndex + i, legendColors[i]);
