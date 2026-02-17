@@ -161,6 +161,11 @@ export interface Config {
   // Mock GPIO Display Options
   mockGpioColors: boolean;
   mockGpioFormat: 'strip' | 'detailed';
+
+  // State and Logging
+  statePath: string;
+  enableLogging: boolean;
+  logPath?: string;
 }
 
 /**

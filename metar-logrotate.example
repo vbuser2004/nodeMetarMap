@@ -1,0 +1,43 @@
+# Logrotate configuration for Node METAR Map
+# Install to: /etc/logrotate.d/node-metar-map
+#
+# Installation:
+#   sudo cp metar-logrotate.example /etc/logrotate.d/node-metar-map
+#   sudo chown root:root /etc/logrotate.d/node-metar-map
+#   sudo chmod 644 /etc/logrotate.d/node-metar-map
+#
+# Test rotation:
+#   sudo logrotate -v -f /etc/logrotate.d/node-metar-map
+
+# METAR History Log
+/home/pi/metar-history.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 pi pi
+    sharedscripts
+    
+    # Optional: Run after rotation
+    # postrotate
+    #     # No action needed - app appends to new file automatically
+    # endscript
+}
+
+# PM2 Logs (if using PM2)
+/home/pi/nodeMetarMap/logs/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 pi pi
+    sharedscripts
+    
+    postrotate
+        pm2 reloadLogs
+    endscript
+}

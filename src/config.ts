@@ -345,6 +345,11 @@ export async function loadConfig(): Promise<Config> {
   const mockGpioFormatStr = getEnvString('MOCK_GPIO_FORMAT', 'strip');
   const mockGpioFormat = (mockGpioFormatStr === 'detailed' ? 'detailed' : 'strip') as 'strip' | 'detailed';
   
+  // State and Logging
+  const statePath = getEnvString('STATE_FILE_PATH', '/home/pi/metar-state.json');
+  const enableLogging = getEnvBoolean('ENABLE_LOGGING', false);
+  const logPath = enableLogging ? getEnvString('LOG_FILE_PATH', '/home/pi/metar-history.log') : undefined;
+  
   const config: Config = {
     useMockGpio,
     ledCount,
@@ -372,7 +377,10 @@ export async function loadConfig(): Promise<Config> {
     offsetLegendBy,
     metarApiUrl,
     mockGpioColors,
-    mockGpioFormat
+    mockGpioFormat,
+    statePath,
+    enableLogging,
+    logPath
   };
   
   console.log('Configuration loaded successfully');

@@ -142,23 +142,28 @@ export function parseConditions(
 
 /**
  * Fetch and parse METAR data for all configured airports
- * Returns a map of airport code to conditions
+ * Returns both conditions map and raw METAR data
  * 
  * @param config - Application configuration
- * @returns Map of airport ICAO codes to AirportConditions
+ * @returns Object with conditionsMap and metarDataMap
  */
 export async function fetchAndParseAllConditions(
   config: Config
-): Promise<Map<string, AirportConditions>> {
+): Promise<{
+  conditionsMap: Map<string, AirportConditions>;
+  metarDataMap: Map<string, MetarData>;
+}> {
   // Extract airport codes from mappings
   const airportCodes = config.airports.map(a => a.code);
   const metarData = await fetchMetarData(airportCodes, config.metarApiUrl);
   
   const conditionsMap = new Map<string, AirportConditions>();
+  const metarDataMap = new Map<string, MetarData>();
   
   for (const metar of metarData) {
     const conditions = parseConditions(metar, config);
     conditionsMap.set(metar.icaoId, conditions);
+    metarDataMap.set(metar.icaoId, metar);
     
     // Log parsed conditions
     const windInfo = conditions.windGust
@@ -184,5 +189,5 @@ export async function fetchAndParseAllConditions(
     console.log(`Warning: No METAR data for: ${codes}`);
   }
   
-  return conditionsMap;
+  return { conditionsMap, metarDataMap };
 }

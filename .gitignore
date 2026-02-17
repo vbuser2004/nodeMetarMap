@@ -44,3 +44,9 @@ pnpm-lock.yaml
 
 # Build info
 .tsbuildinfo
+
+# Generated state and data files
+metar-state.json
+metar-state.json.tmp
+metar-history.log
+airports.json
