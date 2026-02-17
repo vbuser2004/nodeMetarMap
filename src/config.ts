@@ -5,7 +5,6 @@
 
 import * as dotenv from 'dotenv';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import { Config, Color } from './types';
 
 // Load environment variables from .env file

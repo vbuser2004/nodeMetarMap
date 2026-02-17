@@ -148,7 +148,7 @@ export class MockLedService implements ILedService {
       
       // Display a visual representation
       const display = this.pixels
-        .map((color, index) => {
+        .map((color) => {
           if (!color) return '_';
           if (color.r === 0 && color.g === 0 && color.b === 0) return '_';
           
