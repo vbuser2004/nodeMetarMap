@@ -86,29 +86,39 @@ export function calculateFlightCategory(
 }
 
 /**
- * Parse visibility string from METAR API
- * Handles formats like "10+", "10", "0.5", etc.
+ * Parse visibility from METAR API
+ * Handles formats like "10+", "10", 10 (number), "0.5", etc.
  * 
- * @param visibilityStr - Visibility string from API
+ * @param visibilityInput - Visibility string or number from API
  * @returns Visibility in statute miles, or null if invalid
  */
-export function parseVisibility(visibilityStr: string | undefined): number | null {
-  if (!visibilityStr) {
+export function parseVisibility(visibilityInput: string | number | undefined): number | null {
+  if (visibilityInput === undefined || visibilityInput === null) {
     return null;
   }
   
-  // Remove "+" character (indicates greater than)
-  const cleaned = visibilityStr.replace('+', '').trim();
-  
-  if (!cleaned) {
-    return null;
+  // If already a number, use it directly
+  if (typeof visibilityInput === 'number') {
+    return visibilityInput >= 0 ? visibilityInput : null;
   }
   
-  const visibility = parseFloat(cleaned);
-  
-  if (isNaN(visibility) || visibility < 0) {
-    return null;
+  // If string, parse it
+  if (typeof visibilityInput === 'string') {
+    // Remove "+" character (indicates greater than)
+    const cleaned = visibilityInput.replace('+', '').trim();
+    
+    if (!cleaned) {
+      return null;
+    }
+    
+    const visibility = parseFloat(cleaned);
+    
+    if (isNaN(visibility) || visibility < 0) {
+      return null;
+    }
+    
+    return visibility;
   }
   
-  return visibility;
+  return null;
 }

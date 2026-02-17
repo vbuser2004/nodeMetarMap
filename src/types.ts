@@ -40,7 +40,7 @@ export interface MetarData {
   wdir?: number;
   wspd?: number;
   wgst?: number;
-  visib?: string;  // Can be "10+" for >10 miles
+  visib?: string | number;  // Can be "10+" (string) or 10 (number)
   altim?: number;
   slp?: number;
   wxString?: string;
