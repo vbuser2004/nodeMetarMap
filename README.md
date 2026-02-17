@@ -5,6 +5,7 @@ A TypeScript/Node.js application that visualizes aviation weather (METAR) data o
 ## Features
 
 - ✅ **Real-time METAR data** from aviationweather.gov JSON API
+- ✅ **JSON-based configuration**: Direct LED addressing with airport names
 - ✅ **Color-coded flight categories**: VFR (green), MVFR (blue), IFR (red), LIFR (magenta)
 - ✅ **Wind animation**: Blink or fade LEDs when winds exceed threshold
 - ✅ **Lightning detection**: White flash for thunderstorms
@@ -15,6 +16,9 @@ A TypeScript/Node.js application that visualizes aviation weather (METAR) data o
 - ✅ **Null-safe**: Handles missing METAR data gracefully
 - ✅ **TypeScript**: Full type safety
 - ✅ **Mock GPIO**: Develop and test without Raspberry Pi hardware
+- ✅ **Colored terminal output**: Visual emoji display during development
+- ✅ **State file export**: JSON state for web dashboard integration
+- ✅ **Historical logging**: Append-only log with logrotate support
 
 ## Requirements
 
@@ -105,11 +109,42 @@ LED_ORDER=GRB             # Color order (GRB for WS2811, RGB for others)
 ```
 
 #### Airports
-```bash
-# Method 1: Inline list
-AIRPORTS=KGMU,KCLT,KJQF
 
-# Method 2: File path
+**Method 1: JSON File (Recommended)**
+
+Create `airports.json` with direct LED addressing:
+
+```json
+{
+  "version": "1.0",
+  "airports": [
+    {"code": "KGMU", "led": 0, "name": "Greenville Downtown"},
+    {"code": "KCLT", "led": 2, "name": "Charlotte Douglas Intl"},
+    {"code": "KJQF", "led": 5, "name": "Concord-Padgett Regional"}
+  ]
+}
+```
+
+```bash
+AIRPORTS_FILE_JSON=./airports.json
+```
+
+**Benefits:**
+- Direct LED index addressing (no NULL placeholders needed)
+- Include airport names for web interface
+- Enable/disable individual airports
+- Self-documenting configuration
+- Flexible physical layout
+
+See `airports.example.json` for a complete example.
+
+**Method 2: Comma-separated list** (sequential LEDs)
+```bash
+AIRPORTS=KGMU,KCLT,KJQF
+```
+
+**Method 3: Text file** (backward compatible, sequential LEDs)
+```bash
 AIRPORTS_FILE=/home/pi/airports
 ```
 
@@ -137,6 +172,19 @@ ACTIVATE_DAYTIME_DIMMING=true
 USE_SUNRISE_SUNSET=true
 LOCATION_LAT=35.2271              # Your latitude
 LOCATION_LON=-80.8431             # Your longitude
+```
+
+#### State and Logging
+```bash
+STATE_FILE_PATH=/home/pi/metar-state.json   # Current state for web interface
+ENABLE_LOGGING=true                         # Enable historical logging
+LOG_FILE_PATH=/home/pi/metar-history.log    # Historical data log
+```
+
+#### Mock GPIO Display (Development)
+```bash
+MOCK_GPIO_COLORS=true       # Use colored emojis in terminal
+MOCK_GPIO_FORMAT=strip      # 'strip' or 'detailed'
 ```
 
 ## Usage
@@ -178,9 +226,11 @@ sudo npm run pixels-off
 1. **Startup**: Loads configuration and initializes LED strip
 2. **Data Fetch**: Retrieves METAR data for all configured airports from aviationweather.gov
 3. **Processing**: Parses weather data and determines flight category for each airport
-4. **Display**: Maps each airport to an LED and sets color based on conditions
-5. **Animation**: Cycles through wind/lightning animations for configured duration
-6. **Shutdown**: Cleanly exits and turns off LEDs
+4. **State Export**: Writes current state to JSON file for web interface
+5. **Historical Logging**: Appends data to log file (if enabled)
+6. **Display**: Maps each airport to its configured LED and sets color based on conditions
+7. **Animation**: Cycles through wind/lightning animations for configured duration
+8. **Shutdown**: Cleanly exits and turns off LEDs
 
 ### Flight Category Rules (FAA)
 
@@ -212,11 +262,18 @@ nodeMetarMap/
 │   │   ├── flightCategory.ts    # Flight category calculation
 │   │   ├── colorMapper.ts       # Condition to color mapping
 │   │   └── shutdown.ts          # Graceful shutdown handling
+│   ├── shared/
+│   │   └── metarState.ts        # State management for web interface
 │   └── scripts/
 │       └── pixelsOff.ts         # LED shutdown utility
 ├── tests/                       # Jest unit tests
 ├── dist/                        # Compiled JavaScript (gitignored)
 ├── logs/                        # PM2 logs (gitignored)
+├── airports.json                # Airport configuration (gitignored)
+├── airports.example.json        # Example airport configuration
+├── metar-state.json             # Current state (gitignored)
+├── metar-history.log            # Historical log (gitignored)
+├── metar-logrotate.example      # Logrotate configuration
 ├── .env                         # Local configuration (gitignored)
 ├── .env.example                 # Configuration template
 ├── ecosystem.config.js          # PM2 configuration
@@ -236,6 +293,80 @@ Pin 12 (GPIO 18 PWM) → LED Strip White/Green Wire (Data)
 ```
 
 **Important**: GPIO 18 supports hardware PWM which is required for reliable NeoPixel timing.
+
+## State Files and Logging
+
+### State File (`metar-state.json`)
+
+The application writes the current state to a JSON file after each METAR fetch. This file is used by the web dashboard to display current conditions.
+
+**Contents:**
+- Current timestamp
+- All airport data (code, name, LED index, flight category, colors)
+- Weather details (wind, temperature, visibility, altimeter)
+- Raw METAR observation
+- LED configuration
+
+**Example:**
+```json
+{
+  "timestamp": "2026-02-17T16:47:12.636Z",
+  "airports": [
+    {
+      "code": "KCLT",
+      "name": "Charlotte/Douglas Intl, NC, US",
+      "led": 2,
+      "flightCategory": "VFR",
+      "windSpeed": 10,
+      "temperature": 13.3,
+      "visibility": 10
+    }
+  ]
+}
+```
+
+### Historical Logging
+
+When `ENABLE_LOGGING=true`, the application appends each observation to a log file in JSON Lines format (one JSON object per line).
+
+**Log Format:**
+```json
+{"timestamp":"2026-02-17T16:47:12.636Z","airport":"KCLT","flightCategory":"VFR","windSpeed":10,"windGustSpeed":0,"lightning":false,"visibility":10,"temperature":13.3}
+```
+
+**Log Rotation:**
+
+Configure automatic log rotation using logrotate:
+
+```bash
+# Install the logrotate configuration
+sudo cp metar-logrotate.example /etc/logrotate.d/node-metar-map
+
+# Test rotation
+sudo logrotate -v -f /etc/logrotate.d/node-metar-map
+```
+
+The example configuration rotates logs daily and keeps 30 days of compressed history.
+
+### Mock GPIO Terminal Output
+
+During development with `USE_MOCK_GPIO=true`, the application displays a visual representation of the LED strip in your terminal.
+
+**Strip Format:**
+```
+[MOCK GPIO] LED Strip:
+         KGMU   KCLT   KJQF  
+Strip:   🟢  🟢  🟦
+[MOCK GPIO] 3/50 LEDs active
+```
+
+**Detailed Format** (set `MOCK_GPIO_FORMAT=detailed`):
+```
+[MOCK GPIO] LED Details:
+  LED  0: KGMU 🟢 VFR     (Greenville Downtown)
+  LED  2: KCLT 🟢 VFR     (Charlotte Douglas Intl)
+  LED  5: KJQF 🟦 MVFR    (Concord-Padgett Regional)
+```
 
 ## Troubleshooting
 
@@ -269,13 +400,16 @@ Pin 12 (GPIO 18 PWM) → LED Strip White/Green Wire (Data)
 |---------|----------------|-----------------|
 | **API Format** | XML | JSON |
 | **Type Safety** | None | TypeScript |
-| **Configuration** | Hardcoded in script | Environment variables |
+| **Configuration** | Hardcoded in script | Environment variables + JSON |
+| **Airport Mapping** | Sequential with NULL | Direct LED addressing |
 | **Display Support** | OLED (optional) | Not implemented |
 | **Async** | Synchronous | Async/await throughout |
-| **GPIO Mock** | None | Built-in mock for development |
+| **GPIO Mock** | None | Colored emoji terminal output |
 | **Process Management** | nohup | PM2 with cron restart |
-| **Tests** | None | Jest unit tests |
+| **Tests** | None | Jest unit tests (42 tests) |
 | **Null Handling** | Basic | Comprehensive (nullable flight category) |
+| **State Export** | None | JSON state file for web interface |
+| **Historical Logging** | None | JSON lines with logrotate support |
 
 ## Development Workflow
 

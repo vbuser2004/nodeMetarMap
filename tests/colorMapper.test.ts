@@ -41,7 +41,11 @@ const mockConfig: Config = {
   useSunriseSunset: false,
   showLegend: false,
   offsetLegendBy: 0,
-  metarApiUrl: 'https://aviationweather.gov/api/data/metar'
+  metarApiUrl: 'https://aviationweather.gov/api/data/metar',
+  mockGpioColors: true,
+  mockGpioFormat: 'strip',
+  statePath: '/tmp/metar-state.json',
+  enableLogging: false
 };
 
 describe('getColorForConditions', () => {
