@@ -1,14 +1,17 @@
 # nodeMETARmap
 
-This repo was a port/inspired by METARmap by [@prueker/METARMap](https://github.com/prueker/METARmap). The goal was to use Node, JSON, and Typescript as I am more comfortable with that ecosystem than Python. I was also looking to add some additional features, such as a rudimentary web interface and/or API.
+This repo is a port/inspired by METARmap by [@prueker/METARMap](https://github.com/prueker/METARmap). 
+
+The goal of this project is to use Node, JSON, and Typescript as I am more comfortable with that ecosystem than Python. I was also looking to add some additional features, such as a rudimentary web interface and/or API.
 
 *NOTE* AI was used extensively to create the code.
 
 ## Major Differences
-Here are a few of the major differences from the original repo:
+Here are a few of the major functional differences from the original repo:
 - Uses a JSON list of airports to avoid adding 'NULL' for LEDs without an associated airport.
 - Assigns a computed Flight Category if one is not provided in the METAR data. This was necessary for some smaller airports that do report but the Flight Category was blank.
-- Gets data from aviationweather.gov in JSON format (my preference)
+- Get data from aviationweather.gov in JSON format (my preference)
+- Develop a web interface and/or API that can view history and current data, confirm map is online & operating, or changes some settings (turn on/off, disable wind, etc)
 
 ## Hardware
 I am using an old Raspberry Pi Zero W for this project.
@@ -37,6 +40,10 @@ Using the actual pin numbers, the wiring is as follows:
 Pin # 4: Red (power)
 Pin # 6: Blue (ground)
 Pin # 12: White (data)
+
+
+## Compatibility
+This project works with ```rpi-ws281x-native v1.0.4```.
 
 
 ** The remainder of this README is created by AI **
@@ -81,7 +88,6 @@ A TypeScript/Node.js application that visualizes aviation weather (METAR) data o
 
 ```bash
 # Clone the repository
-cd /home/jeff/Documents/Development
 git clone <your-repo-url> nodeMetarMap
 cd nodeMetarMap
 
@@ -103,13 +109,12 @@ npm run dev
 
 ```bash
 # On your development machine
-cd /home/jeff/Documents/Development/nodeMetarMap
-git push origin main  # Push your changes
+git push origin master  # Push your changes
 
 # On Raspberry Pi
 ssh pi@metarmap.local
 cd ~
-git clone <your-repo-url> nodeMetarMap
+git clone https://github.com/vbuser2004/nodeMetarMap nodeMetarMap
 cd nodeMetarMap
 
 # Install dependencies (production only)
@@ -486,12 +491,4 @@ MIT
 
 ## Credits
 
-Ported from the original Python METAR Map project. Redesigned for Node.js/TypeScript with modern async patterns and improved error handling.
-
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review the configuration in `.env.example`
-3. Check PM2 logs: `npm run pm2:logs`
-4. Open an issue on GitHub
+Ported from the original Python METARMap project - [@prueker/METARMap](https://github.com/prueker/METARmap).
