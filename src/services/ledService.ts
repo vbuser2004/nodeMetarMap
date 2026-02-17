@@ -161,19 +161,16 @@ export class MockLedService implements ILedService {
   }
   
   private showStrip(): void {
-    // Build airport code labels and colored blocks
-    const labels: string[] = [];
-    const blocks: string[] = [];
+    // Build simple "CODE: emoji" format
+    const statusItems: string[] = [];
     
     for (const airport of this.config.airports) {
       const color = this.pixels[airport.led] || { r: 0, g: 0, b: 0 };
-      labels.push(airport.code.padEnd(6));
-      blocks.push(this.colorize(color));
+      const emoji = this.colorize(color);
+      statusItems.push(`${airport.code}: ${emoji}`);
     }
     
-    console.log('[MOCK GPIO] LED Strip:');
-    console.log('         ' + labels.join(' '));
-    console.log('Strip:   ' + blocks.join('  '));
+    console.log(`[MOCK GPIO] Status: ${statusItems.join('  ')}`);
   }
   
   private showDetailed(): void {

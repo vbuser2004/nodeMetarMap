@@ -354,11 +354,16 @@ During development with `USE_MOCK_GPIO=true`, the application displays a visual 
 
 **Strip Format:**
 ```
-[MOCK GPIO] LED Strip:
-         KGMU   KCLT   KJQF  
-Strip:   🟢  🟢  🟦
+[MOCK GPIO] Status: KGMU: 🟢  KCLT: 🟢  KJQF: 🟦
 [MOCK GPIO] 3/50 LEDs active
 ```
+
+**During Wind Animation:**
+```
+[MOCK GPIO] Status: KGMU: 🟢  KCLT: 🟢  KJQF: ⬛
+[MOCK GPIO] 2/50 LEDs active
+```
+*Note: LEDs blink (⬛) when winds/gusts exceed WIND_BLINK_THRESHOLD*
 
 **Detailed Format** (set `MOCK_GPIO_FORMAT=detailed`):
 ```
