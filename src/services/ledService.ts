@@ -42,26 +42,42 @@ export class RealLedService implements ILedService {
     this.ledCount = config.ledCount;
     
     // Determine strip type based on LED order
-    const stripType =
-      config.ledOrder === 'GRB'
-        ? this.ws281x.stripType.WS2811_STRIP_GRB
-        : this.ws281x.stripType.WS2811_STRIP_RGB;
+    // v1.0.4 uses string values or constants
+    let stripType: any;
+    if (this.ws281x.stripType) {
+      // Use constants if available
+      stripType = config.ledOrder === 'GRB'
+        ? (this.ws281x.stripType.WS2812 || this.ws281x.stripType.WS2811_STRIP_GRB)
+        : (this.ws281x.stripType.WS2811_STRIP_RGB);
+    } else {
+      // Fallback to string values
+      stripType = config.ledOrder === 'GRB' ? 'ws2812' : 'rgb';
+    }
     
     // Initialize the LED strip
     console.log(`Initializing ${config.ledCount} LEDs on GPIO pin ${config.ledPin}`);
     console.log(`LED order: ${config.ledOrder}, Brightness: ${config.ledBrightness}`);
     
     try {
-      this.channel = this.ws281x.init({
+      // v1.0.4 API: Call ws281x as a function, not init()
+      this.channel = this.ws281x(config.ledCount, {
         dma: 10,
         freq: 800000,
-        gpioPin: config.ledPin,
+        gpio: config.ledPin,  // 'gpio' not 'gpioPin'
         invert: false,
         brightness: Math.floor(config.ledBrightness * 255),
         stripType: stripType
       });
       
+      // Get pixel array from channel
       this.pixels = this.channel.array;
+      
+      // Verify initialization succeeded
+      if (!this.pixels || !this.pixels.length) {
+        throw new Error('Failed to get pixel array from channel');
+      }
+      
+      console.log(`Pixel array initialized: ${this.pixels.length} LEDs`);
       
       // Clear LEDs on initialization
       this.clear();
@@ -94,14 +110,21 @@ export class RealLedService implements ILedService {
   
   setBrightness(brightness: number): void {
     const brightnessValue = Math.floor(Math.max(0, Math.min(1, brightness)) * 255);
-    this.ws281x.setBrightness(brightnessValue);
+    // v1.0.4: Set brightness on channel object
+    this.channel.brightness = brightnessValue;
   }
   
   cleanup(): void {
     console.log('Cleaning up LED strip...');
     this.clear();
     this.show();
-    this.ws281x.reset();
+    // v1.0.4: Use finalize() to properly shut down
+    if (this.ws281x.finalize) {
+      this.ws281x.finalize();
+    } else {
+      // Fallback to reset() for older versions
+      this.ws281x.reset();
+    }
     console.log('LED strip cleaned up');
   }
 }
