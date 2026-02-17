@@ -1,4 +1,46 @@
-# Node METAR Map
+# nodeMETARmap
+
+This repo was a port/inspired by METARmap by [@prueker/METARMap](https://github.com/prueker/METARmap). The goal was to use Node, JSON, and Typescript as I am more comfortable with that ecosystem than Python. I was also looking to add some additional features, such as a rudimentary web interface and/or API.
+
+*NOTE* AI was used extensively to create the code.
+
+## Major Differences
+Here are a few of the major differences from the original repo:
+- Uses a JSON list of airports to avoid adding 'NULL' for LEDs without an associated airport.
+- Assigns a computed Flight Category if one is not provided in the METAR data. This was necessary for some smaller airports that do report but the Flight Category was blank.
+- Gets data from aviationweather.gov in JSON format (my preference)
+
+## Hardware
+I am using an old Raspberry Pi Zero W for this project.
+
+## Physical Wiring of LED to Pi
+
+The wires on the WS8211 LED strip are connected to the Pi as follows:
+
+Red: 5V
+Blue: Ground
+White: GPIO 18 (PWM)
+
+This pins on the Pi are as follows. This is while looking at the Pi from the top (pins) and the row of pins is on the righ side:
+
+Pin # 2 (from the top): Red
+Pin # 3 Blue
+Pin # 6 White (GPIO 18 - data)
+
+These pin numbers do not correspond to the actual pin schematics, but is just a simple count from the top down on the right side. The actual pin schematics are in this image: ```./pi-zero-w-gpio-pinout.png```
+
+![GPI Pin Schematic](./pi-zero-w-gpio-pinout.png)
+
+
+Using the actual pin numbers, the wiring is as follows:
+
+Pin # 4: Red (power)
+Pin # 6: Blue (ground)
+Pin # 12: White (data)
+
+
+** The remainder of this README is created by AI **
+## Brief Description
 
 A TypeScript/Node.js application that visualizes aviation weather (METAR) data on NeoPixel LED strips for Raspberry Pi. Displays flight categories with color-coded LEDs and animates wind and lightning conditions.
 
