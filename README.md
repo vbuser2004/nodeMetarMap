@@ -481,6 +481,12 @@ During development with `USE_MOCK_GPIO=true`, the application displays a visual 
 5. Restart: `npm run pm2:restart`
 6. Check logs: `npm run pm2:logs`
 
+### Deploy to Pi without Build (RECOMMENDED to avoid builds on Pi)
+1. On Dev Machine: `npm run build`
+2. Rsync Dist Folder to Pi: `rsync -av --exclude node_modules --exclude .git --include dist/ ./ pi@<YOUR_PI_IP>:/home/pi/nodeMetarMap/`
+3. SSH to Pi: `ssh pi@metarmap.local` 
+4. Restart: `npm run pm2:restart`
+
 ## Contributing
 
 This is a personal project, but suggestions and improvements are welcome! Open an issue or submit a pull request.
