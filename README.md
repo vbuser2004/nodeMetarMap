@@ -41,6 +41,9 @@ Pin # 4: Red (power)
 Pin # 6: Blue (ground)
 Pin # 12: White (data)
 
+### On/Off Button
+In my implementation I added a simple on/of button to the Pi. This is connected to GPIO 17 (Pin # 11) and ground (Pin # 9). Added this line to the /boot/config.txt file to enable the shutdown button: ```dtoverlay=gpio-shutdown,gpio_pin=11,active_low=1,gpio_pull=up,debounce=3000```
+
 
 ## Compatibility
 This project works with ```rpi-ws281x-native v1.0.4```.
